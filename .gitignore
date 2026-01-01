@@ -1,0 +1,14 @@
+index.cjs
+index.js
+index.d.ts
+node_modules
+dist
+.pnpm-store
+
+.turbo
+**/.turbo
+**/.eslintcache
+
+.env
+.ipynb_checkpoints
+
