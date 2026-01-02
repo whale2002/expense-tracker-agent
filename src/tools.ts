@@ -1,156 +1,65 @@
-/**
- * Tools for the LangChain agent.
- *
- * Define your agent's tools here using the `tool` function from langchain.
- * Each tool should have a clear name, description, and schema to help
- * the model understand when and how to use it.
- */
-
-import { tool } from "langchain";
 import { z } from "zod";
+import { tool } from "@langchain/core/tools";
+import { CATEGORIES, type Expense } from "./types.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+// 计算持久化文件路径（项目根目录下的 expenses.json）
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, "..");
+const EXPENSES_FILE = path.join(projectRoot, "expenses.json");
 
 /**
- * A simple calculator tool that can perform basic arithmetic operations.
+ * 完成的记账记录存储（内存缓存）
  */
-export const calculator = tool(
-  async ({ operation, a, b }) => {
-    switch (operation) {
-      case "add":
-        return `${a} + ${b} = ${a + b}`;
-      case "subtract":
-        return `${a} - ${b} = ${a - b}`;
-      case "multiply":
-        return `${a} × ${b} = ${a * b}`;
-      case "divide":
-        if (b === 0) {
-          return "Error: Division by zero is not allowed.";
-        }
-        return `${a} ÷ ${b} = ${a / b}`;
-      default:
-        return "Error: Unknown operation.";
+const completedExpenses: Expense[] = [];
+
+/**
+ * 完成记账工具
+ * 当所有必要信息收集完毕后调用
+ */
+export const saveExpense = tool(
+  async ({ remark, category, amount, type, date }) => {
+    // 填充默认值与日期（若模型未解析日期，则使用当前时间戳）
+    const payload: Expense = {
+      remark,
+      category,
+      amount,
+      type: type ?? "consume",
+      date: date ?? Date.now(),
+    };
+
+    // 内存保存
+    completedExpenses.push(payload);
+
+    // 文件持久化（以数组形式追加，文件不存在则创建）
+    try {
+      let existing: Expense[] = [];
+      if (fs.existsSync(EXPENSES_FILE)) {
+        const text = fs.readFileSync(EXPENSES_FILE, "utf-8");
+        existing = JSON.parse(text || "[]");
+      }
+      existing.push(payload);
+      fs.writeFileSync(EXPENSES_FILE, JSON.stringify(existing, null, 2), "utf-8");
+    } catch {
+      console.warn("保存 JSON 失败");
     }
+
+    // 返回工具执行结果
+    return JSON.stringify({ status: "success", data: payload });
   },
   {
-    name: "calculator",
+    name: "save_expense",
     description:
-      "Perform basic arithmetic operations (add, subtract, multiply, divide) on two numbers.",
+      "保存完整费用记录为 JSON（追加写入 expenses.json）。当备注、分类、金额齐全时调用。日期未提供将自动补全为当前时间戳。",
     schema: z.object({
-      operation: z
-        .enum(["add", "subtract", "multiply", "divide"])
-        .describe("The arithmetic operation to perform"),
-      a: z.number().describe("The first number"),
-      b: z.number().describe("The second number"),
+      remark: z.string().describe("备注，消费的简短描述。必须有值"),
+      category: z.enum(CATEGORIES).describe("分类，必须是预定义的枚举值之一"),
+      amount: z.number().describe("金额，单位元"),
+      type: z.enum(["consume", "income"]).default("consume").describe("收支类型，默认为支出"),
+      date: z.number().optional().describe("13 位时间戳，未提供则由系统自动填充"),
     }),
   }
 );
-
-/**
- * A tool that returns the current date and time.
- */
-export const getCurrentTime = tool(
-  async () => {
-    const now = new Date();
-    return `Current date and time: ${now.toLocaleString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      timeZoneName: "short",
-    })}`;
-  },
-  {
-    name: "get_current_time",
-    description:
-      "Get the current date and time. Use this when the user asks about the current time or date.",
-    schema: z.object({}),
-  }
-);
-
-/**
- * A tool that simulates fetching weather data for a given location.
- * In a real application, this would call a weather API.
- */
-export const getWeather = tool(
-  async ({ location, unit }) => {
-    // Simulated weather data - in production, replace with actual API call
-    const conditions = ["sunny", "cloudy", "rainy", "partly cloudy", "windy"];
-    const condition = conditions[Math.floor(Math.random() * conditions.length)];
-
-    // Generate a random temperature
-    const tempCelsius = Math.floor(Math.random() * 35) + 5;
-    const temp =
-      unit === "fahrenheit"
-        ? Math.round((tempCelsius * 9) / 5 + 32)
-        : tempCelsius;
-    const unitSymbol = unit === "fahrenheit" ? "°F" : "°C";
-
-    return `Weather in ${location}: ${condition}, ${temp}${unitSymbol}. (Note: This is simulated data)`;
-  },
-  {
-    name: "get_weather",
-    description:
-      "Get the current weather for a specified location. Returns temperature and conditions.",
-    schema: z.object({
-      location: z.string().describe("The city or location to get weather for"),
-      unit: z
-        .enum(["celsius", "fahrenheit"])
-        .default("celsius")
-        .describe("Temperature unit preference"),
-    }),
-  }
-);
-
-/**
- * A tool that can search through a knowledge base.
- * This is a placeholder - replace with actual search functionality.
- */
-export const searchKnowledge = tool(
-  async ({ query, maxResults }) => {
-    // Simulated search results - in production, connect to a vector store or search API
-    const results = [
-      {
-        title: "Introduction to AI Agents",
-        snippet:
-          "AI agents are autonomous systems that can perceive, reason, and act...",
-      },
-      {
-        title: "Building with LangChain",
-        snippet:
-          "LangChain provides tools and abstractions for building LLM applications...",
-      },
-      {
-        title: "Tool Calling in LLMs",
-        snippet:
-          "Modern LLMs can use tools to extend their capabilities beyond text generation...",
-      },
-    ];
-
-    const limitedResults = results.slice(0, maxResults);
-    return `Found ${limitedResults.length} results for "${query}":\n\n${limitedResults
-      .map((r, i) => `${i + 1}. **${r.title}**\n   ${r.snippet}`)
-      .join("\n\n")}`;
-  },
-  {
-    name: "search_knowledge",
-    description:
-      "Search through the knowledge base for relevant information. Use this when the user asks questions that may require looking up information.",
-    schema: z.object({
-      query: z.string().describe("The search query to look for"),
-      maxResults: z
-        .number()
-        .min(1)
-        .max(10)
-        .default(3)
-        .describe("Maximum number of results to return"),
-    }),
-  }
-);
-
-/**
- * All tools available to the agent.
- * Add or remove tools here to customize your agent's capabilities.
- */
-export const TOOLS = [calculator, getCurrentTime, getWeather, searchKnowledge];

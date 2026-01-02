@@ -1,54 +1,30 @@
 /**
- * LangChain Agent Graph
- *
- * This module exports the main agent using LangChain's createAgent.
- * The agent is built on LangGraph and supports:
- * - Tool calling
- * - Streaming responses
- * - Middleware for customization
- * - Human-in-the-loop workflows
+ * 记账 Agent 主逻辑文件
+ * 使用 LangChain createAgent API 实现
  */
 
 import { createAgent } from "langchain";
-import { TOOLS } from "./tools.js";
-import { SYSTEM_PROMPT } from "./prompts.js";
+import { EXPENSE_SYSTEM_PROMPT } from "./prompts.js";
+import { ChatOpenAI } from "@langchain/openai";
+import { MemorySaver } from "@langchain/langgraph";
+import { saveExpense } from "./tools.js";
+
+const model = new ChatOpenAI({
+  modelName: process.env.MODEL_NAME,
+  temperature: 0,
+  configuration: {
+    baseURL: process.env.OPENAI_BASE_URL,
+  },
+})
+
 
 /**
- * The main agent instance.
- *
- * Uses createAgent from LangChain, which provides:
- * - A simpler interface for building agents
- * - Built-in middleware support for customization
- * - Automatic tool binding and execution
- * - Runs on LangGraph for durable execution
- *
- * @example
- * ```typescript
- * const result = await agent.invoke({
- *   messages: [{ role: "user", content: "What's 2 + 2?" }],
- * });
- * console.log(result.content);
- * ```
+ * 创建记账 Agent Graph
+ * 使用 langchain 的 createAgent API
  */
 export const agent = createAgent({
-  // The model to use - supports "provider:model" format
-  // Uses ANTHROPIC_API_KEY or OPENAI_API_KEY from environment
-  model: "anthropic:claude-haiku-4-5",
-
-  // Tools available to the agent
-  tools: TOOLS,
-
-  // System prompt defining agent behavior
-  systemPrompt: SYSTEM_PROMPT,
-
-  // Optional: Add middleware for advanced customization
-  // middleware: [
-  //   summarizationMiddleware({
-  //     model: "anthropic:claude-haiku-4-5",
-  //     trigger: { tokens: 4000 },
-  //   }),
-  //   humanInTheLoopMiddleware({
-  //     interruptOn: { sensitive_tool: { allowedDecisions: ["approve", "reject"] } },
-  //   }),
-  // ],
+  model,
+  systemPrompt: EXPENSE_SYSTEM_PROMPT,
+  checkpointer: new MemorySaver(),
+  tools: [saveExpense],
 });
