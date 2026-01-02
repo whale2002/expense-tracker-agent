@@ -1,186 +1,158 @@
-# LangChain Agent Starter
+# 智能记账 Agent
 
-[![Open in - LangGraph Studio](https://img.shields.io/badge/Open_in-LangGraph_Studio-00324d.svg?logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4NS4zMzMiIGhlaWdodD0iODUuMzMzIiB2ZXJzaW9uPSIxLjAiIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHBhdGggZD0iTTEzIDcuOGMtNi4zIDMuMS03LjEgNi4zLTYuOCAyNS43LjQgMjQuNi4zIDI0LjUgMjUuOSAyNC41QzU3LjUgNTggNTggNTcuNSA1OCAzMi4zIDU4IDcuMyA1Ni43IDYgMzIgNmMtMTIuOCAwLTE2LjEuMy0xOSAxLjhtMzcuNiAxNi42YzIuOCAyLjggMy40IDQuMiAzLjQgNy42cy0uNiA0LjgtMy40IDcuNkw0Ny4yIDQzSDE2LjhsLTMuNC0zLjRjLTQuOC00LjgtNC44LTEwLjQgMC0xNS4ybDMuNC0zLjRoMzAuNHoiLz48cGF0aCBkPSJNMTguOSAyNS42Yy0xLjEgMS4zLTEgMS43LjQgMi41LjkuNiAxLjcgMS44IDEuNyAyLjcgMCAxIC43IDIuOCAxLjYgNC4xIDEuNCAxLjkgMS40IDIuNS4zIDMuMi0xIC42LS42LjkgMS40LjkgMS41IDAgMi43LS41IDIuNy0xIDAtLjYgMS4xLS44IDIuNi0uNGwyLjYuNy0xLjgtMi45Yy01LjktOS4zLTkuNC0xMi4zLTExLjUtOS44TTM5IDI2YzAgMS4xLS45IDIuNS0yIDMuMi0yLjQgMS41LTIuNiAzLjQtLjUgNC4yLjguMyAyIDEuNyAyLjUgMy4xLjYgMS41IDEuNCAyLjMgMiAyIDEuNS0uOSAxLjItMy41LS40LTMuNS0yLjEgMC0yLjgtMi44LS44LTMuMyAxLjYtLjQgMS42LS41IDAtLjYtMS4xLS4xLTEuNS0uNi0xLjItMS42LjctMS43IDMuMy0yLjEgMy41LS41LjEuNS4yIDEuNi4zIDIuMiAwIC43LjkgMS40IDEuOSAxLjYgMi4xLjQgMi4zLTIuMy4yLTMuMi0uOC0uMy0yLTEuNy0yLjUtMy4xLTEuMS0zLTMtMy4zLTMtLjUiLz48L3N2Zz4=)](https://langgraph-studio.vercel.app/templates/open?githubUrl=https://github.com/langchain-ai/react-agent-js)
+基于 LangChain 的智能记账助手，通过自然语言对话帮你记录每一笔消费和收入，并自动保存到飞书多维表格。
 
-A modern starter template for building agentic applications using **LangChain** and `createAgent`. This template provides a clean foundation for building AI agents with tool calling, middleware support, and seamless LangGraph integration.
+## ✨ 特性
 
-![Graph view in LangGraph studio UI](./.github/assets/studio_ui.png)
+- 🤖 **智能对话**：通过自然语言交互，无需手动填写表单
+- 📝 **自动分类**：智能识别消费/收入类型和分类
+- 📊 **飞书集成**：数据自动保存到飞书多维表格，方便管理和分析
+- 💬 **多轮对话**：自动收集缺失信息，友好提醒
+- 🔒 **类型安全**：使用 TypeScript + Zod 确保数据准确性
 
-## ✨ Features
+## 🚀 快速开始
 
-- **LangChain API** - Uses `createAgent` for a clean, simple interface
-- **Built-in Tools** - Calculator, time, weather, and knowledge search examples
-- **Middleware Ready** - Easily add summarization, human-in-the-loop, and more
-- **TypeScript First** - Full type safety with Zod schemas
-- **LangSmith Studio Compatible** - Visualize and debug your agent
-- **LangSmith Integration** - Automatic tracing for debugging and evaluation
+### 1. 环境准备
 
-## 🚀 Quick Start
-
-### 1. Clone and Install
+确保你已安装 Node.js (v18+) 和 pnpm：
 
 ```bash
-git clone https://github.com/langchain-ai/react-agent-js.git
-cd react-agent-js
+# 安装 pnpm（如果还没有）
+npm install -g pnpm
+```
+
+### 2. 安装依赖
+
+```bash
 pnpm install
 ```
 
-### 2. Configure Environment
+### 3. 配置环境变量
+
+复制 `.env.example` 为 `.env` 并填入配置：
 
 ```bash
 cp .env.example .env
 ```
 
-Add your API key to `.env`:
+需要配置以下内容：
 
-```bash
-# For Claude models (recommended)
-ANTHROPIC_API_KEY=your-key-here
+#### API 配置（必填）
 
-# OR for GPT models
-OPENAI_API_KEY=your-key-here
+```env
+# LLM API 配置
+OPENAI_API_KEY=your-api-key-here
+OPENAI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+MODEL_NAME=doubao-seed-1-6-251015
 ```
 
-### 3. Run the Agent
+**支持的服务商**：
+
+- **字节跳动豆包**（推荐）
+
+  - `OPENAI_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`
+  - `MODEL_NAME=doubao-seed-1-6-251015`
+
+- **OpenAI**
+  - `OPENAI_BASE_URL=https://api.openai.com/v1`
+  - `MODEL_NAME=gpt-4o-mini`
+
+#### 飞书多维表格配置（必填）
+
+1. 在[飞书开放平台](https://open.feishu.cn/)创建应用，获取 `app_id` 和 `app_secret`
+2. 创建一个多维表格，添加以下字段：
+   - `备注`（文本）
+   - `分类`（单选：交通、零食、日用品、餐饮、教育、娱乐、旅游、衣服、工资、房租、购物、礼物、蔬果、个人护理、医疗）
+   - `金额`（数字）
+   - `收支`（单选：支出、收入）
+   - `日期`（日期）
+3. 从表格 URL 中提取 `app_token` 和 `table_id`
+
+```env
+FEISHU_APP_ID=your-feishu-app-id
+FEISHU_APP_SECRET=your-feishu-app-secret
+FEISHU_APP_TOKEN=your-bitable-app-token
+FEISHU_TABLE_ID=your-table-id
+```
+
+#### LangSmith 追踪配置（可选）
+
+用于调试和追踪 Agent 执行过程：
+
+```env
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=your-langsmith-api-key
+LANGCHAIN_PROJECT=expense-tracker-agent
+```
+
+### 4. 启动项目
 
 ```bash
-# Run the example script
+# 开发模式（热重载）
+pnpm dev
+
+# 生产模式
 pnpm start
-
-# Or use LangGraph Studio
-# Open the project folder in LangGraph Studio
 ```
 
-## 📁 Project Structure
+### 5. 开始记账
 
-```txt
-src/
-├── agent.ts      # Main agent using createAgent
-├── tools.ts      # Tool definitions with Zod schemas
-├── prompts.ts    # System prompts and templates
-└── index.ts      # CLI entry point for testing
+启动后，你可以通过自然语言与 Agent 对话：
+
+```
+你: 今天中午吃了肯德基，花了 55 元
+
+Agent: 好的，我已经记录了这笔支出：
+- 备注：今天中午吃了肯德基
+- 分类：餐饮
+- 金额：55 元
+- 类型：支出
+- 日期：2025-01-02 12:30:00
+
+已成功保存到飞书多维表格！✅
 ```
 
-## 🛠 Customizing Your Agent
+## 📂 项目结构
 
-### Adding New Tools
-
-Create tools in `src/tools.ts` using the `tool` function:
-
-```typescript
-import { tool } from "langchain";
-import { z } from "zod";
-
-const myTool = tool(
-  async ({ query }) => {
-    // Your tool logic here
-    return `Result for: ${query}`;
-  },
-  {
-    name: "my_tool",
-    description: "Description of what this tool does",
-    schema: z.object({
-      query: z.string().describe("The search query"),
-    }),
-  }
-);
-
-// Add to TOOLS array
-export const TOOLS = [myTool, ...otherTools];
+```
+expense-tracker-agent/
+├── src/
+│   ├── agent.ts           # Agent 主逻辑
+│   ├── prompts.ts         # 系统提示词
+│   ├── types.ts           # 类型定义
+│   ├── tools/             # 工具函数
+│   │   ├── index.ts
+│   │   └── saveExpense.ts # 保存到飞书的工具
+│   └── index.ts           # 入口文件
+├── task/                  # 任务文档
+├── .env                   # 环境变量配置（不提交）
+├── .env.example           # 环境变量示例
+└── package.json
 ```
 
-### Changing the Model
+## 🛠️ 技术栈
 
-Update `src/agent.ts`:
+- **LangChain**：AI Agent 框架
+- **LangGraph**：Agent 状态管理
+- **Zod**：运行时类型校验
+- **TypeScript**：类型安全
+- **飞书开放平台**：数据存储
 
-```typescript
-export const agent = createAgent({
-  // Anthropic models
-  model: "anthropic:claude-sonnet-4-5-20250929",
-  
-  // Or OpenAI models
-  // model: "openai:gpt-4o",
-  // model: "openai:gpt-4-turbo",
-  
-  tools: TOOLS,
-  systemPrompt: SYSTEM_PROMPT,
-});
-```
+## 📝 支持的分类
 
-### Adding Middleware
+- 支出类：交通、零食、日用品、餐饮、教育、娱乐、旅游、衣服、购物、礼物、蔬果、个人护理、医疗
+- 收入类：工资、房租
 
-LangChain supports middleware for advanced customization:
-
-```typescript
-import { 
-  createAgent, 
-  summarizationMiddleware,
-  humanInTheLoopMiddleware 
-} from "langchain";
-
-export const agent = createAgent({
-  model: "anthropic:claude-sonnet-4-5",
-  tools: TOOLS,
-  systemPrompt: SYSTEM_PROMPT,
-  middleware: [
-    // Auto-summarize long conversations
-    summarizationMiddleware({
-      model: "anthropic:claude-sonnet-4-5",
-      trigger: { tokens: 4000 },
-    }),
-    // Require approval for sensitive operations
-    humanInTheLoopMiddleware({
-      interruptOn: {
-        send_email: { allowedDecisions: ["approve", "reject"] },
-      },
-    }),
-  ],
-});
-```
-
-### Customizing the System Prompt
-
-Edit `src/prompts.ts` to change the agent's behavior:
-
-```typescript
-export const SYSTEM_PROMPT = `You are a helpful AI assistant...`;
-```
-
-## 🔍 Using LangSmith Studio
-
-[LangSmith Studio](https://docs.langchain.com/langsmith/studio) provides a visual interface for:
-
-- **Visualizing** your agent's graph structure
-- **Debugging** tool calls and agent decisions
-- **Testing** with interactive conversations
-- **Editing** state to debug specific scenarios
-
-Simply open this project folder in LangSmith Studio to get started.
-
-## 📊 LangSmith Tracing
-
-Enable [LangSmith](https://smith.langchain.com/) for observability:
+## 🔧 开发
 
 ```bash
-# In your .env file
-LANGSMITH_API_KEY=your-key-here
-LANGSMITH_TRACING=true
-LANGSMITH_PROJECT=my-agent-project
+# 类型检查
+pnpm build
+
+# 运行 LangGraph Studio（可视化调试）
+pnpm agent
 ```
 
-All agent invocations will automatically be traced, showing:
+## 📄 License
 
-- Model calls and responses
-- Tool invocations and results
-- Token usage and latency
-
-## 📚 Resources
-
-- [LangChain Documentation](https://docs.langchain.com/oss/javascript/langchain/overview)
-- [LangGraph Documentation](https://docs.langchain.com/oss/javascript/langgraph/overview)
-- [LangSmith Documentation](https://docs.langchain.com/langsmith/home)
-- [LangChain v1 Migration Guide](https://docs.langchain.com/oss/javascript/migrate/langchain-v1)
-
-## 📝 License
-
-MIT License - see [LICENSE](LICENSE) for details.
+MIT

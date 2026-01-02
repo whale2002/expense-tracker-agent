@@ -10,14 +10,13 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm -rf dist",
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
     "agent": "langgraphjs dev"
   },
   "dependencies": {
     "@langchain/core": "^1.1.8",
     "@langchain/langgraph": "^1.0.7",
     "@langchain/openai": "^1.2.0",
+    "@larksuiteoapi/node-sdk": "^1.56.0",
     "langchain": "^1.2.3",
     "zod": "^4.2.1"
   },

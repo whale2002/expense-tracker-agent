@@ -4,10 +4,11 @@
  */
 
 import { createAgent } from "langchain";
-import { EXPENSE_SYSTEM_PROMPT } from "./prompts.js";
+import { EXPENSE_SYSTEM_PROMPT } from "./prompts";
 import { ChatOpenAI } from "@langchain/openai";
 import { MemorySaver } from "@langchain/langgraph";
-import { saveExpense } from "./tools.js";
+import { saveExpenseToLark } from "./tools";
+
 
 const model = new ChatOpenAI({
   modelName: process.env.MODEL_NAME,
@@ -26,5 +27,5 @@ export const agent = createAgent({
   model,
   systemPrompt: EXPENSE_SYSTEM_PROMPT,
   checkpointer: new MemorySaver(),
-  tools: [saveExpense],
+  tools: [saveExpenseToLark],
 });
