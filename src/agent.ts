@@ -6,7 +6,8 @@
 import { createAgent } from "langchain";
 import { ChatOpenAI } from "@langchain/openai";
 import { MemorySaver } from "@langchain/langgraph";
-import { saveExpenseToLark, parseDateExpression } from "./tools";
+import { parseDateExpression } from './tools/parse-date-expression'
+import { saveExpenseToLark } from './tools/save-expense'
 import { EXPENSE_SYSTEM_PROMPT } from "./prompts";
 
 const model = new ChatOpenAI({
@@ -24,8 +25,7 @@ const model = new ChatOpenAI({
  */
 export const agent = createAgent({
   model,
-  checkpointer: new MemorySaver(),
-  tools: [parseDateExpression, saveExpenseToLark],
-  // TODO: 确认如何设置系统提示词，暂时保留提示词导入避免编译错误
   systemPrompt: EXPENSE_SYSTEM_PROMPT,
+  tools: [parseDateExpression, saveExpenseToLark],
+  checkpointer: new MemorySaver(),
 });

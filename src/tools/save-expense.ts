@@ -99,11 +99,26 @@ export const saveExpenseToLark = tool(
       // 保存到飞书多维表格
       await saveExpenseToFeishu(payload);
 
+      // 格式化日期为可读字符串
+      const dateObj = new Date(payload.date);
+      const formattedDate = dateObj.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).replace(/\//g, '-');
+
       // 返回工具执行结果
       return JSON.stringify({
         status: "success",
         message: "成功保存到飞书多维表格",
-        data: payload
+        data: {
+          ...payload,
+          formattedDate
+        }
       });
     } catch (error) {
       console.error("保存费用记录失败:", error);

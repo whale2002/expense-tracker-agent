@@ -35,9 +35,22 @@ export const parseDateExpression = tool(
     try {
       const timestamp = parseDateFromStructuredInput(input);
 
-      // 返回结果，包含时间戳和原始输入（便于调试）
+      // 格式化日期为可读字符串 (YYYY-MM-DD HH:mm:ss)
+      const dateObj = new Date(timestamp);
+      const formattedDate = dateObj.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).replace(/\//g, '-');
+
+      // 返回结果，包含时间戳、格式化日期和原始输入
       return JSON.stringify({
         timestamp,
+        formattedDate,
         input,
       });
     } catch (error) {
