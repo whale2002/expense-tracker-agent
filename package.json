@@ -1,9 +1,9 @@
 {
-  "name": "langchain-agent-starter",
-  "author": "Your Name",
+  "name": "expense-tracker-agent",
+  "author": "haoyu.qin",
   "version": "0.0.0",
   "license": "MIT",
-  "description": "A modern starter template for building agentic applications using LangChain's createAgent.",
+  "description": "An expense tracker agent that can help users track their expenses and manage their budgets.",
   "main": "src/index.ts",
   "private": true,
   "type": "module",
@@ -11,6 +11,7 @@
     "build": "tsc",
     "clean": "rm -rf dist",
     "agent": "langgraphjs dev",
+    "dev:server": "tsx src/server/index.ts",
     "test": "vitest",
     "test:run": "vitest run"
   },
@@ -19,6 +20,7 @@
     "@langchain/langgraph": "^1.0.7",
     "@langchain/openai": "^1.2.0",
     "@larksuiteoapi/node-sdk": "^1.56.0",
+    "express": "^4.18.2",
     "langchain": "^1.2.3",
     "zod": "^4.2.1"
   },
@@ -27,6 +29,7 @@
     "@eslint/js": "^9.39.2",
     "@langchain/langgraph-cli": "^1.1.2",
     "@tsconfig/recommended": "^1.0.13",
+    "@types/express": "^4.17.21",
     "@types/node": "^22.0.0",
     "@typescript-eslint/eslint-plugin": "^8.50.1",
     "@typescript-eslint/parser": "^8.50.1",

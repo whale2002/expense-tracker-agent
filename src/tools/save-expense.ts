@@ -3,6 +3,9 @@ import { tool } from "@langchain/core/tools";
 import { Client, withTenantToken } from "@larksuiteoapi/node-sdk";
 import { CATEGORIES, type Expense } from "../types";
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 // 从环境变量读取配置
 const FEISHU_APP_ID = process.env.FEISHU_APP_ID;
 const FEISHU_APP_SECRET = process.env.FEISHU_APP_SECRET;

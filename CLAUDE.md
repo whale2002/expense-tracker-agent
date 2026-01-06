@@ -53,6 +53,9 @@ pnpm clean
 # Start LangGraph Studio for visual debugging and agent testing
 pnpm agent
 
+# Start the server with Lark bot integration
+pnpm dev:server
+
 # Direct TypeScript execution (for development)
 npx tsx src/index.ts
 ```
@@ -96,6 +99,21 @@ npx tsx src/index.ts
 - Uses `@larksuiteoapi/node-sdk` with `withTenantToken` for authenticated requests
 - Maps to Feishu Bitable fields: 备注, 分类, 金额, 收支, 日期
 - Returns structured JSON with status/message/data
+
+**Server Layer** (`src/server/`)
+- **LarkWebSocketClient** (`src/server/lark/client.ts`): WebSocket 连接管理，接收飞书事件
+- **LarkMessageSender** (`src/server/lark/sender.ts`): 发送和更新飞书消息
+- **MessageController** (`src/server/controller/message.ts`): 处理消息路由和用户会话
+- **AgentInvoker** (`src/server/service/agent-invoker.ts`): 封装 Agent 调用，处理流式响应
+- **ServerApp** (`src/server/app.ts`): 集成所有组件，启动 HTTP 服务器和 WebSocket
+
+**Architecture Principles**:
+- Agent 层和 Server 层完全分离
+- Agent 可以独立运行和测试（LangGraph Studio）
+- Server 层通过 AgentInvoker 接口调用 Agent
+- 使用 WebSocket 长连接接收飞书事件（无需内网穿透）
+- 支持流式响应更新（卡片消息）
+- 内存存储用户会话（thread_id）
 
 ### Data Flow
 
