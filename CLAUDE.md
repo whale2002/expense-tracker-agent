@@ -25,6 +25,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an AI-powered expense tracking agent that uses LangChain and LangGraph to enable natural language bookkeeping with automatic data persistence to Feishu (Lark) multi-dimensional tables. Users can record expenses and income through conversational input in Chinese.
 
+## File Naming Convention
+
+**Kebab-case Naming**:
+- All source files MUST use kebab-case (lowercase with hyphens)
+- Examples: `agent.ts`, `parse-date-expression.ts`, `save-expense.ts`
+- Counter-examples: `parseDateExpression.ts`, `dateParser.ts`
+
+**Type Definitions**:
+- **Files**: kebab-case (e.g., `save-expense.ts`)
+- **Variables/Functions**: camelCase (e.g., `saveExpenseToLark`, `parseDateExpression`)
+- **Types/Interfaces**: PascalCase (e.g., `Expense`, `DateInput`)
+- **Constants**: UPPER_SNAKE_CASE or PascalCase for exported consts
+
 ## Development Commands
 
 ```bash
@@ -50,22 +63,32 @@ npx tsx src/index.ts
 
 **Agent Graph** (`src/agent.ts`)
 - Uses LangChain's `createAgent` API to build the conversational agent
-- Implements `dynamicSystemPromptMiddleware` for real-time date/time injection into system prompts
 - Configured with ChatOpenAI model (supports OpenAI-compatible APIs like ByteDance's Doubao)
 - Uses `MemorySaver` checkpointer for conversation state management
-- Single tool: `saveExpenseToLark`
+- Tools: `parseDateExpression`, `saveExpenseToLark`
 
-**Dynamic System Prompt** (`src/prompts.ts`)
-- System prompt contains `{{CURRENT_TIME}}` placeholder that gets replaced at runtime
+**System Prompt** (`src/prompts.ts`)
+- Static system prompt (no dynamic time injection)
 - Lists all 15 supported categories (交通, 零食, 日用品, 餐饮, 教育, 娱乐, 旅游, 衣服, 工资, 房租, 购物, 礼物, 蔬果, 个人护理, 医疗)
 - Defines multi-turn conversation workflow for collecting missing information
-- Includes date handling rules for absolute dates, relative dates, and defaults
+- **Date handling** requires LLM to call `parseDateExpression` tool with structured semantic data
+- LLM MUST NOT calculate timestamps itself
 
 **Type System** (`src/types.ts`)
 - `CATEGORIES`: Const array of all valid category names
 - `Expense`: Complete record with remark, date, category, amount, type
 - Date is stored as 13-millisecond timestamp
 - Type field: "consume" (支出) or "income" (收入)
+
+**Date Parsing Tool** (`src/tools/parseDateExpression.ts` & `src/utils/dateParser.ts`)
+- **Architecture**: Structured semantic approach - LLM understands semantics, Tool does calculation
+- **Input**: Structured data (e.g., `{ type: "relative", offset: -1, unit: "day" }` for yesterday)
+- **Output**: 13-bit millisecond timestamp
+- **Features**:
+  - Relative dates: yesterday (`offset: -1`), today (`offset: 0`), tomorrow (`offset: 1`)
+  - Absolute dates: `{ type: "absolute", month: 1, day: 2 }` for January 2nd
+  - Uses `Date.now()` internally for current time (no runtime dependency)
+- **Error handling**: Falls back to `Date.now()` on invalid input
 
 **Feishu Integration** (`src/tools/saveExpense.ts`)
 - Tool definition with Zod schema for type-safe parameters
@@ -76,21 +99,32 @@ npx tsx src/index.ts
 
 ### Data Flow
 
-1. User provides natural language input (e.g., "今天中午吃了肯德基，花了55元")
-2. LLM extracts structured information guided by system prompt
-3. Agent validates completeness (required: remark, category, amount)
-4. If incomplete: asks user for missing info without calling tools
-5. If complete: calls `save_expense_to_lark` tool
+1. User provides natural language input (e.g., "昨天打车花了20元")
+2. LLM extracts and **converts date semantics to structured data**
+   - "昨天" → `{ type: "relative", offset: -1, unit: "day" }`
+   - "1月2日" → `{ type: "absolute", month: 1, day: 2 }`
+3. LLM calls `parseDateExpression` tool with structured data
+4. Tool calculates and returns timestamp
+5. LLM calls `saveExpenseToLark` with timestamp from step 4
 6. Tool saves to Feishu and returns formatted confirmation
+
+**Key**: LLM never calculates timestamps - it only understands semantics and converts to structured data. All time calculations happen in the tool.
 
 ### Date Handling Strategy
 
-The agent handles three date scenarios:
-- **No time mentioned**: Use current timestamp (via `getCurrentDateTime()` in utils)
-- **Absolute time** ("2025年1月2日"): Convert directly to timestamp
-- **Relative time** ("昨天", "今天上午"): Calculate relative to current time injected in prompt
+The agent uses a **structured semantic architecture** for date handling:
 
-Current time is dynamically inserted into system prompt on each request via middleware.
+- **No time mentioned**: Don't pass `date` parameter to `saveExpenseToLark` (uses `Date.now()` internally)
+- **Relative time** ("昨天", "前天", "明天"): LLM calls `parseDateExpression` with `{ type: "relative", offset: N, unit: "day" }`
+- **Absolute time** ("1月2日", "2025年1月2日"): LLM calls `parseDateExpression` with `{ type: "absolute", month: 1, day: 2 }`
+
+**Important**: LLM MUST NOT calculate timestamps itself or pass date strings. All timestamp calculations happen in the `parseDateExpression` tool using `Date.now()`.
+
+**Architectural Benefits**:
+- LLM is completely decoupled from runtime state (no current time dependency)
+- Tool is a pure function: deterministic input → deterministic output
+- Easily testable and maintainable
+- No dynamic prompt middleware needed
 
 ## Environment Configuration
 

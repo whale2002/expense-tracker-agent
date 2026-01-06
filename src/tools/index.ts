@@ -4,3 +4,4 @@
  */
 
 export { saveExpenseToLark } from "./saveExpense";
+export { parseDateExpression } from "./parse-date-expression";

@@ -3,12 +3,11 @@
  * 使用 LangChain createAgent API 实现
  */
 
-import { createAgent, dynamicSystemPromptMiddleware } from "langchain";
-import { formatSystemPrompt } from "./prompts";
+import { createAgent } from "langchain";
 import { ChatOpenAI } from "@langchain/openai";
 import { MemorySaver } from "@langchain/langgraph";
-import { saveExpenseToLark } from "./tools";
-import { getCurrentDateTime } from "./utils";
+import { saveExpenseToLark, parseDateExpression } from "./tools";
+import { EXPENSE_SYSTEM_PROMPT } from "./prompts";
 
 const model = new ChatOpenAI({
   modelName: process.env.MODEL_NAME,
@@ -26,11 +25,7 @@ const model = new ChatOpenAI({
 export const agent = createAgent({
   model,
   checkpointer: new MemorySaver(),
-  tools: [saveExpenseToLark],
-  middleware: [
-    dynamicSystemPromptMiddleware(() => {
-      const currentDateTime = getCurrentDateTime();
-      return formatSystemPrompt(currentDateTime);
-    }),
-  ],
+  tools: [parseDateExpression, saveExpenseToLark],
+  // TODO: 确认如何设置系统提示词，暂时保留提示词导入避免编译错误
+  systemPrompt: EXPENSE_SYSTEM_PROMPT,
 });
