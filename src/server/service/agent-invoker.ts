@@ -49,7 +49,7 @@ export class LangChainAgentInvoker implements AgentInvoker {
           messages: [{ role: 'user', content: message }],
         },
         {
-          streamMode: 'updates',
+          streamMode: 'messages',
           configurable: {
             thread_id: threadId,
           },
@@ -62,53 +62,49 @@ export class LangChainAgentInvoker implements AgentInvoker {
         // 记录原始 chunk
         await logger.logChunk(chunk, chunkIndex++);
 
-        // Chunk 结构：{ nodeName: { messages: [...] } }
-        // 例如：{ model: { messages: [...] } } 或 { tools: { messages: [...] } }
+        // streamMode: 'messages' 时，chunk 是消息数组
+        // 结构：[{ role, content, ... }]
+        if (Array.isArray(chunk)) {
+          for (const msg of chunk) {
+            const msgType = (msg as unknown as { type?: string }).type;
+            const content = msg.content as string;
 
-        // 遍历所有节点（如 "model", "tools"）
-        for (const [, nodeData] of Object.entries(chunk)) {
-          if (nodeData?.messages && Array.isArray(nodeData.messages)) {
-            for (const msg of nodeData.messages) {
-              const msgType = (msg as unknown as { type?: string }).type;
-              const content = msg.content as string;
-
-              // 处理 AI 消息
-              if (msgType === 'ai' && content && typeof content === 'string' && content.length > 0) {
-                // 过滤掉空的 content（工具调用时的消息）
-                if (!content.startsWith('{')) {
-                  yield {
-                    type: 'token',
-                    content,
-                  };
-                }
+            // 处理 AI 消息
+            if (msgType === 'ai' && content && typeof content === 'string' && content.length > 0) {
+              // 过滤掉空的 content（工具调用时的消息）
+              if (!content.startsWith('{')) {
+                yield {
+                  type: 'token',
+                  content,
+                };
               }
-              // 处理工具消息
-              else if (msgType === 'tool' && content) {
-                // 解析工具返回结果并格式化显示
-                try {
-                  const toolData = JSON.parse(content);
-                  const toolName = (msg as unknown as { name?: string }).name || 'Tool';
+            }
+            // 处理工具消息
+            else if (msgType === 'tool' && content) {
+              // 解析工具返回结果并格式化显示
+              try {
+                const toolData = JSON.parse(content);
+                const toolName = (msg as unknown as { name?: string }).name || 'Tool';
 
-                  // 格式化工具调用结果
-                  let formattedContent = `\n🔧 调用工具: ${toolName}\n`;
+                // 格式化工具调用结果
+                let formattedContent = `\n🔧 调用工具: ${toolName}\n`;
 
-                  if (toolData.status === 'success') {
-                    formattedContent += `✅ ${toolData.message || '执行成功'}\n`;
-                  } else if (toolData.status === 'error') {
-                    formattedContent += `❌ ${toolData.message || '执行失败'}\n`;
-                  }
-
-                  yield {
-                    type: 'token',
-                    content: formattedContent,
-                  };
-                } catch {
-                  // 如果解析失败，显示原始内容
-                  yield {
-                    type: 'token',
-                    content: `\n🔧 工具返回: ${content}\n`,
-                  };
+                if (toolData.status === 'success') {
+                  formattedContent += `✅ ${toolData.message || '执行成功'}\n`;
+                } else if (toolData.status === 'error') {
+                  formattedContent += `❌ ${toolData.message || '执行失败'}\n`;
                 }
+
+                yield {
+                  type: 'token',
+                  content: formattedContent,
+                };
+              } catch {
+                // 如果解析失败，显示原始内容
+                yield {
+                  type: 'token',
+                  content: `\n🔧 工具返回: ${content}\n`,
+                };
               }
             }
           }
