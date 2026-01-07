@@ -4,7 +4,7 @@
 
 集成飞书机器人服务，通过 WebSocket 连接接收用户消息，并使用现有的 LangChain Agent 处理记账请求。Server 与 Agent 代码完全分离，通过清晰的接口进行通信。
 
-## 动机
+## why
 
 当前 Agent 只能在 LangGraph Studio 中调试，无法实际部署和用户使用。需要：
 
@@ -135,14 +135,17 @@ interface AgentResponse {
 相比参考项目，我们采用更简化的设计：
 
 1. **不需要 OAuth 认证**：
+
    - 机器人直接接收消息，无需用户授权
    - 如果需要区分用户，使用飞书的 `open_id`
 
 2. **不需要 MCP 客户端**：
+
    - Agent 工具直接在代码中定义
    - 不需要动态加载工具
 
 3. **使用简单消息格式**：
+
    - 不需要复杂的卡片消息
    - 使用文本消息即可
 
@@ -161,10 +164,12 @@ interface AgentResponse {
 ### 方案 1：使用 Webhook 模式
 
 **优点：**
+
 - 支持 Lark（飞书海外版）
 - 不需要保持长连接
 
 **缺点：**
+
 - 需要内网穿透（ngrok 等）
 - 本地开发复杂
 - 部署时需要公网可访问的地址
@@ -174,10 +179,12 @@ interface AgentResponse {
 ### 方案 2：完全复用参考项目的架构
 
 **优点：**
+
 - 成熟的架构
 - 功能完整
 
 **缺点：**
+
 - 过度设计（OAuth、MCP 等不需要）
 - 与现有 Agent 架构不兼容
 - 需要大量改动
@@ -187,9 +194,11 @@ interface AgentResponse {
 ### 方案 3：直接将 Agent 嵌入 Server
 
 **优点：**
+
 - 代码更集中
 
 **缺点：**
+
 - Agent 无法独立测试
 - 违反单一职责原则
 - 难以维护
@@ -205,10 +214,12 @@ interface AgentResponse {
 ### 依赖项
 
 新增依赖：
+
 - `express`: HTTP 服务器
 - `@types/express`: TypeScript 类型定义
 
 已存在依赖：
+
 - `@larksuiteoapi/node-sdk`: 用于飞书 API
 
 ### 性能
@@ -220,10 +231,12 @@ interface AgentResponse {
 ## 待解决问题
 
 1. **是否需要用户认证？**
+
    - 建议：暂不需要，机器人直接接收消息
    - 如果需要区分用户，使用 `open_id`
 
 2. **是否需要持久化会话？**
+
    - 建议：暂不需要，使用内存存储
    - 后续可以接入数据库或 Redis
 
