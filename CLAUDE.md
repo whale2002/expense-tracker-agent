@@ -25,6 +25,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is an AI-powered expense tracking agent that uses LangChain and LangGraph to enable natural language bookkeeping with automatic data persistence to Feishu (Lark) multi-dimensional tables. Users can record expenses and income through conversational input in Chinese.
 
+The project consists of two main components:
+1. **Agent Layer**: A LangChain-based conversational agent that processes natural language and manages bookkeeping logic
+2. **Server Layer**: A Lark (Feishu) bot server that provides WebSocket-based real-time messaging interface
+
+Users can interact with the agent either through the Lark bot (recommended) or via command-line interface (for debugging).
+
 ## File Naming Convention
 
 **Kebab-case Naming**:
@@ -115,6 +121,57 @@ npx tsx src/index.ts
 - 支持流式响应更新（卡片消息）
 - 内存存储用户会话（thread_id）
 
+### Server Layer Architecture
+
+The Server layer (`src/server/`) provides the Lark bot integration:
+
+**Components**:
+
+1. **LarkWebSocketClient** (`src/server/lark/client.ts`):
+   - Establishes and manages WebSocket connection with Lark
+   - Subscribes to `im.message.receive_v1` events
+   - Handles connection errors and automatic reconnection (5s retry)
+   - Forwards received events to MessageController
+
+2. **LarkMessageSender** (`src/server/lark/sender.ts`):
+   - Sends text messages to Lark using `im.message.create` API
+   - Updates existing messages using `im.message.patch` API
+   - Implements throttling (200ms) to avoid API rate limits
+   - Handles API errors and retries
+
+3. **MessageController** (`src/server/controller/message.ts`):
+   - Routes incoming messages to appropriate handlers
+   - Extracts user_id (open_id), chat_id, and message content
+   - Manages user sessions using thread_id mapping
+   - Coordinates AgentInvoker and LarkMessageSender
+   - Filters non-text messages (images, files, etc.)
+
+4. **AgentInvoker** (`src/server/service/agent-invoker.ts`):
+   - Encapsulates LangChain Agent invocation
+   - Processes streaming responses from Agent
+   - Converts Agent events to Lark message format
+   - Returns AsyncGenerator for real-time updates
+
+5. **ServerApp** (`src/server/app.ts`):
+   - Initializes Express server (for health checks)
+   - Starts LarkWebSocketClient
+   - Registers graceful shutdown handlers
+   - Manages server lifecycle
+
+**Session Management**:
+- Each user gets a unique thread_id: `thread_<open_id>_<timestamp>`
+- Thread IDs are stored in-memory (Map: open_id → thread_id)
+- Lost on server restart (acceptable for initial implementation)
+- Agent uses MemorySaver to maintain conversation state per thread
+
+**Message Flow**:
+1. User sends message in Lark → WebSocket event
+2. LarkWebSocketClient receives event → MessageController
+3. MessageController gets/creates thread_id → AgentInvoker
+4. AgentInvoker streams responses → MessageController
+5. MessageController sends updates via LarkMessageSender → Lark
+6. User sees real-time message updates in Lark
+
 ### Data Flow
 
 1. User provides natural language input (e.g., "昨天打车花了20元")
@@ -201,3 +258,47 @@ Use `pnpm agent` to launch LangGraph Studio, which provides:
 - State checkpoint visualization
 
 This is the recommended way to test changes to prompts, tool definitions, or agent behavior.
+
+## Usage Patterns
+
+### Development Workflow
+
+1. **Agent Development**:
+   - Use `pnpm agent` to open LangGraph Studio
+   - Test agent logic, prompts, and tools in isolation
+   - Verify tool calls and responses
+   - Debug conversation flow
+
+2. **Server Integration Testing**:
+   - Use `pnpm dev:server` to start the full server
+   - Send messages via Lark bot
+   - Check server logs for errors
+   - Verify WebSocket connection stability
+
+3. **Production Deployment**:
+   - Ensure all environment variables are set
+   - Start server with `pnpm dev:server`
+   - Monitor logs for connection errors
+   - Configure process manager (PM2, systemd, etc.)
+
+### Common Issues
+
+**WebSocket Connection Fails**:
+- Check `FEISHU_APP_ID` and `FEISHU_APP_SECRET`
+- Verify network connectivity to Lark API
+- Check server logs for authentication errors
+
+**Agent Not Responding**:
+- Check `OPENAI_API_KEY` and `OPENAI_BASE_URL`
+- Verify model availability
+- Test with `pnpm dev` (CLI mode) to isolate Server issues
+
+**Messages Not Saving to Feishu**:
+- Verify `FEISHU_APP_TOKEN` and `FEISHU_TABLE_ID`
+- Check table has all required fields
+- Ensure app has permissions for "新增记录" and "查看表格"
+
+**Session Lost After Restart**:
+- This is expected behavior (in-memory storage)
+- Users need to start new conversation after restart
+- For persistence, implement database/Redis backend
