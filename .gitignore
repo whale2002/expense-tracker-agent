@@ -12,6 +12,8 @@ dist
 .env
 .ipynb_checkpoints
 
+# Agent logs
+logs/
 
 # LangGraph API
 .langgraph_api

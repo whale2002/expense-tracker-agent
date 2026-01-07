@@ -14,6 +14,7 @@ import type { MessageEvent } from '../types';
  * Lark Message Event Structure
  */
 interface LarkMessageEvent {
+  event_id?: string;
   sender?: {
     sender_id?: {
       open_id?: string;
@@ -48,6 +49,24 @@ export type MessageEventHandler = (event: MessageEvent) => Promise<void>;
 export class LarkWebSocketClient {
   private larkWsClient: Lark.WSClient;
   private eventDispatcher: Lark.EventDispatcher;
+  // 事件去重：记录已处理的 event_id
+  private processedEvents = new Set<string>();
+
+  /**
+   * 检查是否为重复事件
+   */
+  private isDuplicateEvent(eventId: string): boolean {
+    if (this.processedEvents.has(eventId)) {
+      return true;
+    }
+    this.processedEvents.add(eventId);
+    // 限制缓存大小防止内存泄漏
+    if (this.processedEvents.size > 10000) {
+      const firstKey = this.processedEvents.values().next().value;
+      this.processedEvents.delete(firstKey as string);
+    }
+    return false;
+  }
 
   /**
    * 构造函数
@@ -117,6 +136,15 @@ export class LarkWebSocketClient {
       // 监听即时消息接收事件
       'im.message.receive_v1': async (event: LarkMessageEvent) => {
         try {
+          // 事件去重
+          const eventId = event.event_id;
+          if (!eventId) {
+            return;
+          }
+          if (this.isDuplicateEvent(eventId)) {
+            return;
+          }
+
           await this.handleMessageEvent(event);
         } catch (error) {
           console.error('❌ Failed to handle message event:', error);
