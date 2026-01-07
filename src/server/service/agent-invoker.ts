@@ -7,16 +7,8 @@
  */
 
 import { ReactAgent } from 'langchain';
+import { AgentLogger } from '../utils/logger';
 import type { AgentInvoker, AgentResponse } from '../types';
-
-/**
- * LangChain 消息内容类型
- * LangChain Message Content Type
- */
-type MessageContent =
-  | string
-  | Array<string | { type: string; text?: string }>
-  | { type: string; text?: string };
 
 /**
  * LangChain Agent 调用器实现
@@ -37,13 +29,18 @@ export class LangChainAgentInvoker implements AgentInvoker {
     message: string,
     config?: { threadId?: string }
   ): AsyncGenerator<AgentResponse> {
-    console.log(`🤖 调用 Agent - 用户: ${userId}`);
     console.log(`🤖 Invoking Agent - User: ${userId}`);
-    console.log(`📝 消息: ${message}`);
     console.log(`📝 Message: ${message}`);
 
     // 生成或使用提供的 thread_id
     const threadId = config?.threadId || `thread_${userId}_${Date.now()}`;
+
+    // 创建日志记录器（使用 threadId，同一个 thread 共用日志文件）
+    const logger = new AgentLogger(threadId);
+    await logger.logMessage(`=== Agent Invocation Started ===`);
+    await logger.logMessage(`User: ${userId}`);
+    await logger.logMessage(`Message: ${message}`);
+    await logger.logMessage(`Thread ID: ${threadId}`);
 
     try {
       // 调用 agent.stream() 获取流式响应
@@ -52,6 +49,7 @@ export class LangChainAgentInvoker implements AgentInvoker {
           messages: [{ role: 'user', content: message }],
         },
         {
+          streamMode: 'messages',
           configurable: {
             thread_id: threadId,
           },
@@ -59,24 +57,53 @@ export class LangChainAgentInvoker implements AgentInvoker {
       );
 
       // 处理流式响应
+      let chunkIndex = 0;
       for await (const chunk of stream) {
-        // chunk 结构示例：
-        // {
-        //   messages: [{ role: 'assistant', content: '...' }],
-        //   ...
-        // }
+        // 记录原始 chunk
+        await logger.logChunk(chunk, chunkIndex++);
 
-        if (chunk.messages && Array.isArray(chunk.messages)) {
-          for (const msg of chunk.messages) {
-            if (msg.role === 'assistant' && msg.content) {
-              // 提取文本内容
-              const content = this.extractTextContent(msg.content);
+        // streamMode: 'messages' 时，chunk 是消息数组
+        // 结构：[{ role, content, ... }]
+        if (Array.isArray(chunk)) {
+          for (const msg of chunk) {
+            const msgType = (msg as unknown as { type?: string }).type;
+            const content = msg.content as string;
 
-              if (content) {
-                // 发送 token 响应
+            // 处理 AI 消息
+            if (msgType === 'ai' && content && typeof content === 'string' && content.length > 0) {
+              // 过滤掉空的 content（工具调用时的消息）
+              if (!content.startsWith('{')) {
                 yield {
                   type: 'token',
                   content,
+                };
+              }
+            }
+            // 处理工具消息
+            else if (msgType === 'tool' && content) {
+              // 解析工具返回结果并格式化显示
+              try {
+                const toolData = JSON.parse(content);
+                const toolName = (msg as unknown as { name?: string }).name || 'Tool';
+
+                // 格式化工具调用结果
+                let formattedContent = `\n🔧 调用工具: ${toolName}\n`;
+
+                if (toolData.status === 'success') {
+                  formattedContent += `✅ ${toolData.message || '执行成功'}\n`;
+                } else if (toolData.status === 'error') {
+                  formattedContent += `❌ ${toolData.message || '执行失败'}\n`;
+                }
+
+                yield {
+                  type: 'token',
+                  content: formattedContent,
+                };
+              } catch {
+                // 如果解析失败，显示原始内容
+                yield {
+                  type: 'token',
+                  content: `\n🔧 工具返回: ${content}\n`,
                 };
               }
             }
@@ -90,43 +117,13 @@ export class LangChainAgentInvoker implements AgentInvoker {
         content: '',
       };
 
-      console.log('✅ Agent 响应完成');
       console.log('✅ Agent response completed');
+      await logger.logMessage(`=== Agent Invocation Completed ===`);
     } catch (error) {
-      console.error('❌ Agent 调用失败:', error);
       console.error('❌ Agent invocation failed:', error);
+      await logger.logMessage(`=== Agent Invocation Failed ===`);
+      await logger.logError(error);
       throw error;
     }
-  }
-
-  /**
-   * 提取文本内容
-   * Extract text content from message
-   * @param content 消息内容（可能是字符串或复杂对象）
-   * @returns 提取的文本
-   */
-  private extractTextContent(content: MessageContent): string {
-    // 如果是字符串，直接返回
-    if (typeof content === 'string') {
-      return content;
-    }
-
-    // 如果是数组，提取所有文本
-    if (Array.isArray(content)) {
-      return content
-        .map((item) => {
-          if (typeof item === 'string') return item;
-          if (typeof item === 'object' && item?.type === 'text') return item.text || '';
-          return '';
-        })
-        .join('');
-    }
-
-    // 如果是对象，尝试提取文本
-    if (typeof content === 'object' && content !== null) {
-      if ('text' in content) return String(content.text);
-    }
-
-    return '';
   }
 }
